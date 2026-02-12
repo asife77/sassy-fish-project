@@ -1,0 +1,62 @@
+@startuml
+' --- PRETTIER STYLING ---
+skinparam actor {
+    BackgroundColor White
+    BorderColor Black
+}
+skinparam usecase {
+    BackgroundColor White
+    BorderColor #222
+}
+skinparam PackageStyle rectangle
+left to right direction
+
+' --- ACTORS ---
+actor "User" as U 
+actor "Sassy Me" as SM <<System>> #Fuchsia/DeepPink
+
+' --- SYSTEM BOUNDARY ---
+rectangle "Sassy Me (Rate My Life)"#Physical {
+    
+    package "Identity"#business {
+        usecase "Log In" as L 
+        usecase "Manage Profile" as MP 
+    }
+
+    package "Content Management"#business {
+        usecase "Create New Post" as NP 
+        usecase "Rate with Stars" as RATE 
+        usecase "Add Tags" as TAGS 
+        usecase "Mark as Favorite" as FAV 
+        usecase "Add picture" as PIC
+        
+        ' Relationships: Posting includes these steps
+        NP <.. RATE : <<include>>
+        NP <.. PIC : <<include>>
+        NP <.. TAGS : <<include>>
+        NP <.. FAV : <<include>>
+    }
+
+    package "Social"#business  {
+        usecase "View FYP (Feed)" as SF 
+        usecase "Filter Feed by Tags" as FF  
+        usecase "Comment on Post" as CP 
+        usecase "Add Friends" as AF 
+    }
+}
+
+' --- CONNECTIONS ---
+U -- L
+U -- MP
+U -- NP
+U -- SF
+U -- FF
+U -- CP
+U -- AF
+
+' The system handles the logic for these
+L -- SM
+NP -- SM
+SF -- SM
+FF -- SM
+@enduml
