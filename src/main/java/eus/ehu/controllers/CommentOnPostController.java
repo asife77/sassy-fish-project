@@ -68,14 +68,18 @@ public class CommentOnPostController {
             System.out.println("comment is empty!");
             return;
         }
-        
+        if(currentPost == null || currentUser == null) {
+            System.out.println("post or user context is missing!");
+            return;
+        }
         System.out.println("comment saved: " + commentText);
         
         // 1. create the comment object
         Comment newComment = new Comment(currentUser.getUsername(), commentText, LocalDate.now(), currentPost);
         
         // 2. add the comment to the post internally
-        currentPost.addComment(newComment);
+        //currentPost.addComment(newComment); 
+        // not needed anymore since the business logic will handle this
 
         // 3. TODO: send it to the database via business logic
         businessLogic.addCommentToPost(currentPost, newComment);

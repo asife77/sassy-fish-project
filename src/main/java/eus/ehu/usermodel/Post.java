@@ -5,14 +5,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import javafx.scene.image.Image;
 
-import eus.ehu.usermodel.Comment;
-
+@Entity
+@Table(name = "posts")
 public class Post {
 
     @Id
@@ -20,9 +27,14 @@ public class Post {
     private Long id;
     private String title;
     private String description;
-    private String author;
+
+    @ManyToOne
+    private User user; // Author of the post
+    private String author; // Username of the author
     private boolean isFavourite;
     private double starRating = 0.0; // 1-5
+    @ElementCollection
+    @Enumerated(EnumType.STRING)
     private List<Tag> tags = new ArrayList<>(); // ENUM of tags
     private LocalDate date;
 
@@ -31,6 +43,7 @@ public class Post {
     private List<Comment> comments = new ArrayList<>();
 
     // IMAGE
+    @Transient
     private Image image;
     private String imagePath;
 
@@ -43,6 +56,12 @@ public class Post {
         return title;
     }
 
+    public User getUser() {
+        return user;
+    }
+    public void setUser(User user) {
+        this.user = user;
+    }
     public void setTitle(String title) {
         this.title = title;
     }
@@ -69,6 +88,10 @@ public class Post {
 
     public void setStarRating(double starRating) {
         this.starRating = starRating;
+    }
+
+    public Long getId() {
+        return id;
     }
 
     public List<Tag> getTags() {

@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -24,6 +25,9 @@ public class User {
     private String username;
     private String email;
     private String profilePicturePath;
+
+    @OneToMany(mappedBy = "user")
+    private java.util.List<Post> posts;
 
     public User() {
     }   //Default constructor for JPA  
@@ -46,6 +50,10 @@ public class User {
     public String getBio() { return bio; }
     public void setBio(String bio) { this.bio = bio; }
     
+    public java.util.List<Post> getPosts() {
+        return posts;
+    }
+
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
     
