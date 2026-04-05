@@ -22,7 +22,9 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class CommentOnPostController {
@@ -39,20 +41,9 @@ public class CommentOnPostController {
     @FXML
     private Label errorLabel;
 
+    @FXML
+    private VBox commentsContainer;
 
-    // TABLE OF COMMENTS
-    @FXML
-    private TableView<Comment> commentsTable;
-
-    @FXML
-    private TableColumn<Comment, String> usernameColumn;
-
-    @FXML
-    private TableColumn<Comment, String> commentTextColumn;
-    
-    @FXML
-    private ObservableList<Comment> comments;
-    
     // variables to store the context of the comment
     private Post currentPost;
     private User currentUser;
@@ -93,9 +84,66 @@ public class CommentOnPostController {
     public void initData(Post post, BusinessLogic bl) {
         this.currentPost = post;
         this.businessLogic = bl;
+        reloadComments();
+    }
 
-        // load the comments of the post into the table
-        loadComments();
+    private void reloadComments() {
+        if (commentsContainer == null) {
+            return;
+        }
+        commentsContainer.getChildren().clear();
+
+        if (currentPost == null || currentPost.getComments() == null || currentPost.getComments().isEmpty()) {
+            Label emptyLabel = new Label("No comments yet. Be the first one.");
+            emptyLabel.setStyle("-fx-text-fill: #64748b; -fx-font-size: 13px; -fx-padding: 8;");
+            commentsContainer.getChildren().add(emptyLabel);
+            return;
+        }
+
+        for (int index = currentPost.getComments().size() - 1; index >= 0; index--) {
+            commentsContainer.getChildren().add(createCommentCard(currentPost.getComments().get(index)));
+        }
+    }
+
+    private VBox createCommentCard(Comment comment) {
+        VBox card = new VBox(6);
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 14; -fx-border-color: #e2e8f0; -fx-border-radius: 14; -fx-padding: 10;");
+
+        HBox header = new HBox(8);
+        Label authorLabel = new Label(comment.getAuthor() == null ? "unknown" : comment.getAuthor());
+        authorLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #0f172a; -fx-font-size: 13px;");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+
+        String commentDate = comment.getDate() == null ? "" : comment.getDate().toString();
+        Label dateLabel = new Label(commentDate);
+        dateLabel.setStyle("-fx-text-fill: #64748b; -fx-font-size: 11px;");
+
+        header.getChildren().addAll(authorLabel, spacer, dateLabel);
+
+        Label textLabel = new Label(comment.getText() == null ? "" : comment.getText());
+        textLabel.setWrapText(true);
+        textLabel.setMaxWidth(350);
+        textLabel.setStyle("-fx-text-fill: #1e293b; -fx-font-size: 13px;");
+
+        card.getChildren().addAll(header, textLabel);
+        return card;
+    }
+
+    private void refreshCurrentPostFromDatabase() {
+        if (businessLogic == null || currentPost == null || currentPost.getId() == null) {
+            return;
+        }
+
+        Post refreshedPost = businessLogic.getAllPosts().stream()
+            .filter(p -> p.getId() != null && p.getId().equals(currentPost.getId()))
+            .findFirst()
+            .orElse(null);
+
+        if (refreshedPost != null) {
+            currentPost = refreshedPost;
+        }
     }
 
     // handle the save button click event
@@ -138,12 +186,13 @@ public class CommentOnPostController {
         
         // send it to the database via business logic
         businessLogic.addCommentToPost(currentPost, newComment);
+
+        // refresh from DB so we always show persisted state in the comments panel
+        refreshCurrentPostFromDatabase();
+        reloadComments();
         
         // clear the comment area after saving
         commentArea.clear();
-       
-        // refresh the comments table to show the new comment
-        loadComments();
     }
 
     //handle the cancel button click event
