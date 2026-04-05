@@ -1,8 +1,5 @@
 package eus.ehu.data_access;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
-
 import java.util.List;
 
 import org.hibernate.boot.MetadataSources;
@@ -12,6 +9,8 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import eus.ehu.usermodel.Comment;
 import eus.ehu.usermodel.Post;
 import eus.ehu.usermodel.User;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 
 public class DbAccessManager {
 
@@ -81,6 +80,20 @@ public class DbAccessManager {
         System.out.println("DataBase is closed");
     }
 
+
+    // retrieves a user by their username (used to verify login)
+    public User getUserByUsername(String username) {
+        try{
+            return db.createQuery("FROM User u WHERE u.username = :username", User.class)
+                             .setParameter("username", username)
+                             .getSingleResult();
+                
+        } catch (Exception e) {
+            System.out.println("User not found!");
+            return null;
+        }
+    }
+
     // vNEW VERSION W/ FIXED USER-POST LINKING LOGIC
     public void storePost(Post post) {
         // 1. Prevent the "Transaction already active" error
@@ -140,7 +153,7 @@ public class DbAccessManager {
         return db.createQuery("FROM Post", Post.class).getResultList();
     }
     public List<Post> getPostsByUser(String username) {
-        return db.createQuery("FROM Post WHERE author = :username", Post.class)
+        return db.createQuery("FROM Post p WHERE p.user.username = :username", Post.class)
                  .setParameter("username", username)
                  .getResultList();
     }
@@ -159,6 +172,27 @@ public class DbAccessManager {
         }
         managedPost.addComment(comment); // link the comment to the post in memory
         db.persist(comment);
+        db.getTransaction().commit();
+    }
+
+    public List<Comment> getAllComments() {
+        return db.createQuery("FROM Comment", Comment.class).getResultList();
+    }
+
+    public void updateLikePost(Post post) {
+        db.getTransaction().begin();
+        
+        // find post in the db
+        Post managedPost = db.find(Post.class, post.getId());
+            
+        if(managedPost != null) {
+
+            // sync db like count with the one from the post object (value updated in the controller
+            managedPost.setLikeCount(post.getLikeCount());
+            
+            // save the updated post back to the database
+            db.merge(managedPost);
+        }
         db.getTransaction().commit();
     }
 }

@@ -5,13 +5,15 @@ import java.net.URL;
 import java.time.LocalDate;
 import java.util.ResourceBundle;
 
-import eus.ehu.businesslogic.BlInterface;
+import eus.ehu.businesslogic.BusinessLogic;
 import eus.ehu.usermodel.Post;
 import eus.ehu.usermodel.Tag;
 import eus.ehu.usermodel.User;
 import javafx.animation.PauseTransition;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
@@ -20,11 +22,11 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.DragEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
 public class CreatePostController {
 
@@ -68,13 +70,15 @@ public class CreatePostController {
 
 
     private Post currentPost;
-    private BlInterface businessLogic;
+    private BusinessLogic businessLogic;
     private User currentUser; // who is creating the post
 
     // updated to receive the logged-in user
-    public void initData(BlInterface bl, User user) {
+    public void initData(BusinessLogic bl) {
         this.businessLogic = bl;
-        this.currentUser = user;
+
+        // get user from bl (it should be there cause you can't get to the create post screen without being logged in)
+        this.currentUser = bl.getCurrentUser(); 
 
         // assign the user to the post immediately so the database knows the author
         if (this.currentPost != null && this.currentUser != null) {
@@ -116,12 +120,6 @@ public class CreatePostController {
                 // also automatically updates the Post.image
         }
     }   
-
-    @FXML
-    void handleDragOver(DragEvent event) {
-        // TODO:
-        // photo dragged over the image area -> change style to indicate that the user can drop the photo there 
-    }
 
     @FXML
     void handleStarClicked(MouseEvent event) {
@@ -186,10 +184,10 @@ public class CreatePostController {
 
         // if selected -> style red
         if (isSelected) {
-            favouriteButton.setStyle("-fx-text-fill: red");
+            favouriteButton.setStyle("-fx-text-fill: red; -fx-font-size: 40px; -fx-background-color: transparent;");
         
         } else { // if not selected -> style grey
-            favouriteButton.setStyle("-fx-text-fill: #b9b9b9");
+            favouriteButton.setStyle("-fx-text-fill: #b9b9b9; -fx-font-size: 40px; -fx-background-color: transparent;");
         }
 
         // save value inside Post object (for later saving to db)
@@ -210,8 +208,14 @@ public class CreatePostController {
         // 1. update Post object w/ data from the fields
         currentPost.setTitle(titleField.getText()); // title
         currentPost.setDescription(descriptionField.getText()); // description
+        currentPost.setDate(LocalDate.now()); // date (set to today's date automatically)
+        currentPost.setLikeCount(0);
 
-        // 2. collect the selected tags
+        // 2. set author of the post to the current logged-in user (get it from the bl)
+        User postUser = businessLogic.getCurrentUser();
+        currentPost.setUser(postUser);
+
+        // 3. collect the selected tags
 
         // remove old tags (prevents duplicates if save button clicked multiple times)
         currentPost.clearTags();
@@ -231,21 +235,21 @@ public class CreatePostController {
             }
         }    
 
-        // 3. check if all required fields are filled & handle error messages
+        // 4. check if all required fields are filled & handle error messages
         boolean error = errorCheck();
 
         // only proceed if there's nothing missing
         if (!error) {
 
-            // 4. save Post to db
+            // 5. save Post to db
                 // TO DO. create a FeedController w/ ObservableList<Post> feedPosts
                 // feedPosts.add(currentPost);
                 businessLogic.savePost(currentPost);
         
-            // 5. CLOSE WINDOW get back to previous screen (main feed)
+            // 6. CLOSE WINDOW get back to previous screen (main feed)
             //imageDropArea.getScene().getWindow().hide();
 
-            // 5. go back to feed and refresh the posts to show the new post (instead of just going back without refreshing and having to click the profile button to see the new post in the feed)
+            // 7. go back to feed and refresh the posts to show the new post (instead of just going back without refreshing and having to click the profile button to see the new post in the feed)
             goBackToFeed();
         }
     }
@@ -330,7 +334,7 @@ public class CreatePostController {
         
         // 3. favourite starts unselected
         favouriteButton.setSelected(false);
-        favouriteButton.setStyle("-fx-text-fill: #b9b9b9;");
+        favouriteButton.setStyle("-fx-text-fill: #b9b9b9; -fx-font-size: 40px; -fx-background-color: transparent;");
 
         // 4. add today's date (date format: yyyy-mm-dd)
         currentPost.setDate(LocalDate.now() ); // add date to the Post object db
@@ -340,11 +344,17 @@ public class CreatePostController {
     // met o go back to the feed after creating a post (called at the end of savePost() and cancelPost())
     private void goBackToFeed() {
         try {
-            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/eus/ehu/FeedPage.fxml"));
-            javafx.scene.Parent root = loader.load();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/eus/ehu/FeedPage.fxml"));
+            Parent root = loader.load();
             
+            // get controller for the feed page
+            FeedController feedController = loader.getController();
+
+            // inject the business logic to the feed controller so it can load the posts from the db
+            feedController.initData(this.businessLogic); // pass the bl so the feed can load the posts from the db
+
             // take the user back to the feed page (switch scene)
-            javafx.stage.Stage stage = (javafx.stage.Stage) titleField.getScene().getWindow();
+            Stage stage = (javafx.stage.Stage) titleField.getScene().getWindow();
             stage.setScene(new javafx.scene.Scene(root));
             
         } catch (Exception e) {
